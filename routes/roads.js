@@ -2,64 +2,167 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Roads = require('../models/roads');
 const Locations = require('../models/locations');
+const fastcsv = require("fast-csv");
+const fs = require("fs");
 
 const roadRouter = express.Router();
 
 roadRouter.get("/:id/traffic-condition", async (req,res)=>{
-    const road = await Roads.findById(req.params.id);
-    if(!road){
-        res.status(404).send("Road not found");
+    try{
+        const road = await Roads.findById(req.params.id);
+        if(!road){
+            res.status(404).send("Road not found");
+        }
+        res.status(200).send(`Traffic condition for the road between ${road.start_location_name} and ${road.end_location_name} is ${road.traffic_condition}`);
+    }catch(err){
+        res.status(500).send(`Internal server error : ${err}`);
+    }   
+})
+
+roadRouter.get("/report/traffic", async (req,res)=>{
+    try {
+        const roads = await Roads.find().lean(); // Use .lean() to get plain JavaScript objects
+        
+        if (roads.length === 0) {
+            return res.status(404).send("No roads found");
+        }
+
+        // Transform the data to ensure it is in a flat format
+        const transformedData = roads.map(road => ({
+            start_location_id: road.start_location_id,
+            start_location_name: road.start_location_name,
+            end_location_id: road.end_location_id,
+            end_location_name: road.end_location_name,
+            distance: road.distance,
+            traffic_condition: road.traffic_condition,
+            time_stamp: road.time_stamp.toISOString() // Convert Date to ISO string
+        }));
+
+        // Create a writable stream to write the CSV file
+        const ws = fs.createWriteStream('traffic-report.csv');
+
+        fastcsv
+            .write(transformedData, { headers: true })
+            .on('finish', () => {
+                console.log("Write to traffic-report.csv successfully!");
+            })
+            .pipe(ws);
+
+        res.status(200).send("Traffic report generated successfully");
     }
-    res.status(200).send(`Traffic condition for the road between ${road.start_location_name} and ${road.end_location_name} is ${road.traffic_condition}`);
+    catch(err){
+        res.status(500).send(`Internal server error : ${err}`);
+    }
+})
+
+roadRouter.get("/shortest-path", async (req,res)=>{
+    try{
+        const data = req.body;
+        const location_A = await Locations.findOne({location_name: data.location_A});
+        const location_B = await Locations.findOne({location_name: data.location_B});
+        const roads = await Roads.find();
+        const graph = {};
+        for(let road of roads){
+            if(!graph[road.start_location_name]){
+                graph[road.start_location_name] = {};
+            }
+            graph[road.start_location_name][road.end_location_name] = road.distance;
+        }
+        const visited = {};
+        const distance = {};
+        const path = {};
+        const queue = [];
+        for(let key in graph){
+            distance[key] = Infinity;
+        }
+        distance[location_A.location_name] = 0;
+        queue.push(location_A.location_name);
+        while(queue.length){
+            let current = queue.shift();
+            if(visited[current]){
+                continue;
+            }
+            visited[current] = true;
+            for(let neighbor in graph[current]){
+                let newDistance = distance[current] + graph[current][neighbor];
+                if(newDistance < distance[neighbor]){
+                    distance[neighbor] = newDistance;
+                    path[neighbor] = current;
+                    queue.push(neighbor);
+                }
+            }
+        }
+        let current = location_B.location_name;
+        let pathArr = [];
+        while(current != location_A.location_name){
+            pathArr.push(current);
+            current = path[current];
+        }
+        pathArr.push(location_A.location_name);
+        pathArr.reverse();
+        res.status(200).send(pathArr);
+    }catch(err){
+        res.status(500).send(`Internal server error : ${err}`);
+    }
 })
 
 roadRouter.post("/add", async (req,res)=>{
-    const data = req.body;
-    const location_A = await Locations.findOne({location_name: data.location_A});
-    const location_B = await Locations.findOne({location_name: data.location_B});
-    const road = await Roads.findOne({
-        start_location_id: location_A._id,
-        end_location_id: location_B._id
-    })
-    if(road){
-        if(road.distance == data.distance ){
-            res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " already exists with same distance");
+    try{
+        const data = req.body;
+        const location_A = await Locations.findOne({location_name: data.location_A});
+        const location_B = await Locations.findOne({location_name: data.location_B});
+        const road = await Roads.findOne({
+            start_location_id: location_A._id,
+            end_location_id: location_B._id
+        })
+        if(road){
+            if(road.distance == data.distance ){
+                res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " already exists with same distance");
+            }
         }
+        const newroad = await Roads.create({
+            start_location_id: location_A._id,
+            start_location_name: data.location_A,
+            end_location_id: location_B._id,
+            end_location_name: data.location_B,
+            distance: data.distance,
+            traffic_condition: data.traffic_condition,
+            time_stamp: new Date()
+        })
+    
+        res.status(201).send("Successfully added road between " + data.location_A + " and " + data.location_B);
     }
-    const newroad = await Roads.create({
-        start_location_id: location_A._id,
-        start_location_name: data.location_A,
-        end_location_id: location_B._id,
-        end_location_name: data.location_B,
-        distance: data.distance,
-        traffic_condition: data.traffic_condition,
-        time_stamp: new Date()
-    })
-
-    res.status(201).send("Successfully added road between " + data.location_A + " and " + data.location_B);
+    catch(err){
+        res.status(500).send(`Internal server error : ${err}`);
+    }
 })
 
 roadRouter.patch("/traffic-updates", async (req,res)=>{
-    const data = req.body;
-    const location_A = await Locations.findOne({location_name: data.location_A});
-    const location_B = await Locations.findOne({location_name: data.location_B});
-    const road = await Roads.findOne({
-        start_location_id: location_A._id,
-        end_location_id: location_B._id,
-        distance: data.distance
-    })
-    if(!road){
-        res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " does not exist for the given distance");
+    try{
+        const data = req.body;
+        const location_A = await Locations.findOne({location_name: data.location_A});
+        const location_B = await Locations.findOne({location_name: data.location_B});
+        const road = await Roads.findOne({
+            start_location_id: location_A._id,
+            end_location_id: location_B._id,
+            distance: data.distance
+        })
+        if(!road){
+            res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " does not exist for the given distance");
+        }
+        const updatedRoad = await Roads.findOneAndUpdate({
+            start_location_id: location_A._id,
+            end_location_id: location_B._id,
+            distance: data.distance
+        },{
+            traffic_condition: data.traffic_condition,
+            time_stamp: new Date()
+        })
+        res.status(200).send("Successfully updated traffic condition for road between " + data.location_A + " and " + data.location_B + " with distance " + data.distance);
     }
-    const updatedRoad = await Roads.findOneAndUpdate({
-        start_location_id: location_A._id,
-        end_location_id: location_B._id,
-        distance: data.distance
-    },{
-        traffic_condition: data.traffic_condition,
-        time_stamp: new Date()
-    })
-    res.status(200).send("Successfully updated traffic condition for road between " + data.location_A + " and " + data.location_B + " with distance " + data.distance);
+    catch(err){
+        res.status(500).send(`Internal server error : ${err}`);
+    }
 })
 
 module.exports = roadRouter;

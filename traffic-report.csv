@@ -1,0 +1,3 @@
+start_location_id,start_location_name,end_location_id,end_location_name,distance,traffic_condition,time_stamp
+66acaa9a45dce9cf610146b1,Ahmedabad,66acaea65d4d065df0875734,Anand,100,Moderate,2024-08-02T10:36:20.718Z
+66acaa9a45dce9cf610146b1,Ahmedabad,66acab929df66ed928526b07,Gandhinagar,30,Clear,2024-08-02T10:36:55.999Z
