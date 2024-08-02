@@ -4,9 +4,11 @@ const Roads = require('../models/roads');
 const Locations = require('../models/locations');
 const fastcsv = require("fast-csv");
 const fs = require("fs");
+const { findShortestPath } = require('../utils/shortest-path');
 
 const roadRouter = express.Router();
 
+// Route for getting traffic condition for a road
 roadRouter.get("/:id/traffic-condition", async (req,res)=>{
     try{
         const road = await Roads.findById(req.params.id);
@@ -19,6 +21,7 @@ roadRouter.get("/:id/traffic-condition", async (req,res)=>{
     }   
 })
 
+// Route for getting all roads traffic condition report
 roadRouter.get("/report/traffic", async (req,res)=>{
     try {
         const roads = await Roads.find().lean(); // Use .lean() to get plain JavaScript objects
@@ -48,64 +51,14 @@ roadRouter.get("/report/traffic", async (req,res)=>{
             })
             .pipe(ws);
 
-        res.status(200).send("Traffic report generated successfully");
+        res.status(200).send("Traffic report generated successfully and stored in the server as traffic-report.csv");
     }
     catch(err){
         res.status(500).send(`Internal server error : ${err}`);
     }
 })
 
-roadRouter.get("/shortest-path", async (req,res)=>{
-    try{
-        const data = req.body;
-        const location_A = await Locations.findOne({location_name: data.location_A});
-        const location_B = await Locations.findOne({location_name: data.location_B});
-        const roads = await Roads.find();
-        const graph = {};
-        for(let road of roads){
-            if(!graph[road.start_location_name]){
-                graph[road.start_location_name] = {};
-            }
-            graph[road.start_location_name][road.end_location_name] = road.distance;
-        }
-        const visited = {};
-        const distance = {};
-        const path = {};
-        const queue = [];
-        for(let key in graph){
-            distance[key] = Infinity;
-        }
-        distance[location_A.location_name] = 0;
-        queue.push(location_A.location_name);
-        while(queue.length){
-            let current = queue.shift();
-            if(visited[current]){
-                continue;
-            }
-            visited[current] = true;
-            for(let neighbor in graph[current]){
-                let newDistance = distance[current] + graph[current][neighbor];
-                if(newDistance < distance[neighbor]){
-                    distance[neighbor] = newDistance;
-                    path[neighbor] = current;
-                    queue.push(neighbor);
-                }
-            }
-        }
-        let current = location_B.location_name;
-        let pathArr = [];
-        while(current != location_A.location_name){
-            pathArr.push(current);
-            current = path[current];
-        }
-        pathArr.push(location_A.location_name);
-        pathArr.reverse();
-        res.status(200).send(pathArr);
-    }catch(err){
-        res.status(500).send(`Internal server error : ${err}`);
-    }
-})
-
+// Route for adding a new road
 roadRouter.post("/add", async (req,res)=>{
     try{
         const data = req.body;
@@ -137,6 +90,7 @@ roadRouter.post("/add", async (req,res)=>{
     }
 })
 
+// Route for updating traffic condition for a road
 roadRouter.patch("/traffic-updates", async (req,res)=>{
     try{
         const data = req.body;
@@ -164,5 +118,33 @@ roadRouter.patch("/traffic-updates", async (req,res)=>{
         res.status(500).send(`Internal server error : ${err}`);
     }
 })
+
+// Route for shortest path calculation between two locations using Dijkstra's algorithm but not fully implemented
+roadRouter.get("/shortest-path", async (req, res) => {
+    try {
+        const data = req.body;
+        const locationA = await Locations.findOne({ location_name: data.location_A });
+        const locationB = await Locations.findOne({ location_name: data.location_B });
+        const roads = await Roads.find();
+
+        if (!locationA || !locationB) {
+            return res.status(404).send("Location not found");
+        }
+
+        const graph = {};
+        for (let road of roads) {
+            if (!graph[road.start_location_name]) {
+                graph[road.start_location_name] = {};
+            }
+            graph[road.start_location_name][road.end_location_name] = road.distance;
+        }
+
+        const path = findShortestPath(graph, locationA.location_name, locationB.location_name);
+        res.status(200).send(path);
+    } catch (err) {
+        console.error("Error in shortest path calculation:", err);
+        res.status(500).send(`Internal server error: ${err.message}`);
+    }
+});
 
 module.exports = roadRouter;
