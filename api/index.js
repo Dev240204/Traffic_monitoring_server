@@ -1,15 +1,21 @@
 const express = require('express');
 const app = express();
 const connect = require('./connect');
+const roadRouter = require('../routes/roads');
 const port = 3000
 
-await connect()
+app.use(express.urlencoded({extended: true}));
+app.use(express.json());
+
+connect()
 .then(() => {
     console.log('Connected to database');
 })
 .catch((err)=>{
     console.error('Error connecting to database:', err);
 })
+
+app.use('/roads', roadRouter);
 
 app.get('/', (req,res)=>{
     res.send('Listening on port 3000');
