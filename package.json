@@ -1,0 +1,24 @@
+{
+  "name": "placement_exam",
+  "version": "1.0.0",
+  "description": "Traffic Monitoring Api's",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dev240204/shipment_exam.git"
+  },
+  "author": "Dev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Dev240204/shipment_exam/issues"
+  },
+  "homepage": "https://github.com/Dev240204/shipment_exam#readme",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.8.0",
+    "mongoose": "^8.5.2"
+  }
+}
