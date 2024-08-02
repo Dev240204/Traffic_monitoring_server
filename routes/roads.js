@@ -13,8 +13,10 @@ roadRouter.post("/add", async (req,res)=>{
         start_location_id: location_A._id,
         end_location_id: location_B._id
     })
-    if(road.distance == data.distance ){
-        res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " already exists with same distance");
+    if(road){
+        if(road.distance == data.distance ){
+            res.status(400).send("Road between " + data.location_A + " and " + data.location_B + " already exists with same distance");
+        }
     }
     const newroad = await Roads.create({
         start_location_id: location_A._id,
