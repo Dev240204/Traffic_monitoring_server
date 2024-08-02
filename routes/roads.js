@@ -5,6 +5,14 @@ const Locations = require('../models/locations');
 
 const roadRouter = express.Router();
 
+roadRouter.get("/:id/traffic-condition", async (req,res)=>{
+    const road = await Roads.findById(req.params.id);
+    if(!road){
+        res.status(404).send("Road not found");
+    }
+    res.status(200).send(`Traffic condition for the road between ${road.start_location_name} and ${road.end_location_name} is ${road.traffic_condition}`);
+})
+
 roadRouter.post("/add", async (req,res)=>{
     const data = req.body;
     const location_A = await Locations.findOne({location_name: data.location_A});
@@ -20,7 +28,9 @@ roadRouter.post("/add", async (req,res)=>{
     }
     const newroad = await Roads.create({
         start_location_id: location_A._id,
+        start_location_name: data.location_A,
         end_location_id: location_B._id,
+        end_location_name: data.location_B,
         distance: data.distance,
         traffic_condition: data.traffic_condition,
         time_stamp: new Date()

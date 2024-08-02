@@ -7,9 +7,17 @@ const roadSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    start_location_name : {
+        type: String,
+        required: true
+    },
     end_location_id : {
         type: String,
         required: true,
+    },
+    end_location_name : {
+        type: String,
+        required: true
     },
     distance:{
         type: Number,
