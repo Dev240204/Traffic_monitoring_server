@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const connect = require('./connect');
 const roadRouter = require('../routes/roads');
+const locationRouter = require('../routes/locations');
 const port = 3000
 
 app.use(express.urlencoded({extended: true}));
@@ -16,6 +17,7 @@ connect()
 })
 
 app.use('/roads', roadRouter);
+app.use('/locations', locationRouter);
 
 app.get('/', (req,res)=>{
     res.send('Listening on port 3000');

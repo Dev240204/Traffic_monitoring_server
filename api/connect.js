@@ -8,7 +8,7 @@ const connect = async () => {
         return;
     }
     try {
-        await mongoose.connect(process.env.MONGODB_URI, {
+        await mongoose.connect("mongodb+srv://vercel-admin-user:m6zVozDADJjmZke4@cluster0.djvbb8q.mongodb.net/myFirstDatabase?retryWrites=true&w=majority", {
             useNewUrlParser: true,
             useUnifiedTopology: true,
         });
