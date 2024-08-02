@@ -4,12 +4,12 @@ const Locations = require('./locations');
 
 const roadSchema = mongoose.Schema({
     start_location_id : {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Locations',
+        type: String,
+        required: true
     },
     end_location_id : {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Locations',
+        type: String,
+        required: true,
     },
     distance:{
         type: Number,
