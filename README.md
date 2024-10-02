@@ -31,9 +31,9 @@ To set up this API locally, follow these steps:
 
 2. **Then install all the dependencies of the application**
 
-  ```bash
-  npm install
-  ```
+    ```bash
+    npm install
+    ```
 3. **Then place your mongodb atlas url in your .env file
 
    ```bash
